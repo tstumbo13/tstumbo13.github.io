@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0c0a" />
+  <meta name="description" content="Kettlebell workouts built for the long run. Six structured sessions, twenty-seven movements, one bell." />
+
+  <title>Horsepower · Kettlebell Workouts Built for the Long Run</title>
+
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/icon-167.png" />
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Horsepower" />
+
+  <meta property="og:title" content="Horsepower · Kettlebell Workouts Built for the Long Run" />
+  <meta property="og:description" content="Kettlebell workouts built for the long run. Six structured sessions, twenty-seven movements, one bell." />
+  <meta property="og:type" content="website" />
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0d0c0a;
+      color: #efe9d9;
+      min-height: 100vh;
+      overscroll-behavior-y: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #root { min-height: 100vh; }
+    .loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      color: #6b8068;
+      font-family: -apple-system, system-ui, sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    .loader svg { width: 48px; height: 48px; animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loader" id="initial-loader">
+      <svg viewBox="0 0 100 100" fill="#6b8068">
+        <path d="M38 14 Q38 6 50 6 Q62 6 62 14 L62 28 Q62 30 60 30 L58 30 Q56 30 56 28 L56 18 Q56 12 50 12 Q44 12 44 18 L44 28 Q44 30 42 30 L40 30 Q38 30 38 28 Z"/>
+        <ellipse cx="50" cy="62" rx="34" ry="32"/>
+        <rect x="34" y="28" width="32" height="8" rx="2"/>
+      </svg>
+      <span>Saddling up...</span>
+    </div>
+  </div>
+  <script src="/app.bundle.js" defer></script>
+</body>
+</html>
