@@ -151,6 +151,7 @@
   .pl-move{font-size:34px;font-weight:800;line-height:1.1;margin:4px 0}
   .pl-target{font-size:20px;font-weight:700;color:var(--sage-bright)}
   .pl-cue{font-size:15px;color:var(--steel);line-height:1.55;max-width:420px;margin-top:8px}
+  .pl-demo{margin-top:16px;font-size:13.5px;font-weight:700;color:var(--sage-bright);border:1px solid var(--border);background:var(--surface);padding:10px 18px;border-radius:11px;min-height:40px;display:inline-flex;align-items:center;gap:7px}
   .pl-timer{font-size:74px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;margin:6px 0}
   .pl-timer.rest{color:var(--gold)}
   .pl-ring{font-size:13px;color:var(--steel);text-transform:uppercase;letter-spacing:0.1em}
@@ -819,6 +820,7 @@
     const pct=Math.round((P.i/P.steps.length)*100);
     const isRest=P.phase==='rest';
     const isWarm=s.roundName==='Warm-Up';
+    const demoBtn=MOVES[s.moveId]?'<button class="pl-demo" id="plDemo">▶ How to do this</button>':'';
     let body='';
     if(isRest){
       const nx=P.steps[P.i+1];const nxName=nx?(MOVES[nx.moveId]?MOVES[nx.moveId].name:nx.moveId):'Finish';
@@ -830,12 +832,14 @@
       body=`${s.roundName?`<div class="pl-round">${esc(s.roundName)}${s.roundTot>1?` \xB7 Round ${s.roundIx}/${s.roundTot}`:''}</div>`:''}
         <div class="pl-move">${esc(m.name)}</div>
         <div class="pl-timer" id="plTimer">${fmtClock(P.timeLeft)}</div>
-        <div class="pl-cue">${esc(m.cue||'')}</div>`;
+        <div class="pl-cue">${esc(m.cue||'')}</div>
+        ${demoBtn}`;
     } else {
       body=`${s.roundName?`<div class="pl-round">${esc(s.roundName)}${s.roundTot>1?` \xB7 Round ${s.roundIx}/${s.roundTot}`:''}</div>`:''}
         <div class="pl-move">${esc(m.name)}</div>
         <div class="pl-target">${esc(s.reps||'')}</div>
-        <div class="pl-cue">${esc(m.cue||'')}</div>`;
+        <div class="pl-cue">${esc(m.cue||'')}</div>
+        ${demoBtn}`;
     }
     // controls
     let ctrl='';
@@ -877,6 +881,7 @@
     const dn=$('#plDone');if(dn)dn.onclick=()=>completeRepStep();
     const sk=$('#skipRest');if(sk)sk.onclick=()=>{endStepCleanup();nextStep();};
     const lg=$('#plLog');if(lg)lg.onclick=()=>openLog(P.steps[P.i]);
+    const dm=$('#plDemo');if(dm)dm.onclick=()=>openDemo(P.steps[P.i].moveId);
   }
 
   /* ---------- log sheet ---------- */
@@ -917,6 +922,25 @@
       P.sets.push({stepIndex:P.i,moveId:id,weight,reps,unit:unit()});
       sheet.remove();toast('Set logged');buzz(30);
     };
+  }
+
+  function openDemo(id){
+    const m=MOVES[id];if(!m)return;
+    const vid=VIDEOS[id]||m.videoId;
+    const wasRunning=!!(P&&P.running);
+    if(P)P.running=false;
+    const host=$('#overlay');
+    const sheet=document.createElement('div');sheet.className='sheet-bg';sheet.id='demoSheet';
+    sheet.innerHTML=`<div class="sheet"><div class="grab"></div>
+      <h3>${esc(m.name)}</h3>
+      <div class="muted" style="font-size:13px;margin-bottom:12px">${esc(m.targets||'')}</div>
+      ${vid?`<div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/${esc(vid)}?rel=0" title="${esc(m.name)} demo" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe></div>`:`<a class="btn ghost" href="https://www.youtube.com/results?search_query=${encodeURIComponent('kettlebell '+m.name+' form')}" target="_blank" rel="noopener">Search demos ↗</a>`}
+      <div style="font-size:15px;line-height:1.55;margin:12px 0">${esc(m.cue||'')}</div>
+      <button class="btn" id="demoClose">Back to workout</button></div>`;
+    host.appendChild(sheet);
+    const close=()=>{sheet.remove();if(P){P.running=wasRunning;if(wasRunning&&!P.timer&&P.timeLeft>0)startTick();}renderPlayer();};
+    $('#demoClose',sheet).onclick=close;
+    sheet.onclick=(e)=>{if(e.target===sheet)close();};
   }
 
   function finishWorkout(){

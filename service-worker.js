@@ -1,7 +1,7 @@
 // Horsepower service worker
 // Network-first for the HTML shell (so updates reach installed apps quickly),
 // cache-first for static assets, offline fallback from cache.
-const CACHE_NAME = 'horsepower-v5';
+const CACHE_NAME = 'horsepower-v6';
 const APP_SHELL = [
   '/',
   '/index.html',
