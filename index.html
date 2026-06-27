@@ -350,7 +350,7 @@
     const app=$('#app');
     const r={home:renderHome,workouts:renderWorkouts,workoutDetail:renderWorkoutDetail,
       library:renderLibrary,moveDetail:renderMoveDetail,progress:renderProgress,
-      history:renderHistory,settings:renderSettings,builder:renderBuilder}[view.name]||renderHome;
+      history:renderHistory,settings:renderSettings,builder:renderBuilder,program:renderProgramOverview}[view.name]||renderHome;
     app.innerHTML='<div class="wrap view-pad">'+r()+'</div>';
     if(afterRender[view.name])afterRender[view.name]();
     $('#topbar').classList.remove('hide');
@@ -380,13 +380,7 @@
       <div class="stat"><div class="n">${streak}</div><div class="l">Day streak</div></div>
       <div class="stat"><div class="n">${total}</div><div class="l">Sessions</div></div>
     </div>
-    <div class="section-h">Recommended for you</div>
-    <div class="reco">
-      <div class="tag">${esc(rec.tag)} \xB7 ${esc(rec.duration)}</div>
-      <div class="nm">${esc(rec.name)}</div>
-      <div class="desc">${esc(rec.description)}</div>
-      <button class="btn" data-start="${rec.id}">Start workout</button>
-    </div>`;
+    ${homeProgramSection(rec)}`;
     if(last){
       html+=`<div class="section-h">Last session</div>
       <button class="wkt" data-hist="${last.id}">
@@ -401,7 +395,7 @@
     }
     return html;
   }
-  afterRender.home=()=>{bindStart();$$('[data-hist]').forEach(b=>b.onclick=()=>go('history'));};
+  afterRender.home=()=>{bindStart();$$('[data-hist]').forEach(b=>b.onclick=()=>go('history'));bindHomeProgram();};
   function greeting(){const hr=new Date().getHours();const g=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';return g+'.';}
 
   /* ---------- WORKOUTS ---------- */
@@ -634,14 +628,139 @@
   </script>
   <script>
   /* ============================================================
+     PROGRAMS (Phase 2 — multi-week auto-progressing plan)
+     ============================================================ */
+  const PK='forge-program-v1';
+  const PROGRAMS=[{
+    id:'longrun', name:'The Long Run', subtitle:'8-week strength + conditioning base', weeks:8, perWeek:3,
+    blurb:'A progressive eight-week plan. Three days a week. Start light, build steadily, peak strong, then recover smart — the way real progress is actually built.',
+    arc:[
+      {wk:1,sessions:['foundation','inferno','iron-core'],note:'Greasing the groove. Move clean and find your weight.',load:'Pick a bell you fully control. Leave 2 reps in the tank on every set.'},
+      {wk:2,sessions:['foundation','inferno','iron-core'],note:'Same plan, sharper. Better reps at the same weight.',load:'Same bell as week 1 — make the reps look easy.'},
+      {wk:3,sessions:['forge','emom-iron','iron-core'],note:'Step up — The Engine arrives.',load:'Match week 2 weights on shared lifts. Start new lifts conservative.'},
+      {wk:4,sessions:['forge','emom-iron','iron-core'],note:'Build. Add load where it felt easy.',load:'Anywhere you left 2+ reps in the tank, go up a bell.'},
+      {wk:5,sessions:['forge','inferno','iron-core'],note:'Engine plus burn. Hold your new weights.',load:'Keep the heavier bells from week 4. Stay steady.'},
+      {wk:6,sessions:['anvil','emom-iron','iron-core'],note:'Heavy. The Anvil. Slow down, lift more.',load:'Go heavy on the main lifts — 4 to 6 hard, clean reps.'},
+      {wk:7,sessions:['anvil','inferno','iron-core'],note:'Peak. Your strongest week.',load:'Push the top weight you can keep clean. This is the test.'},
+      {wk:8,sessions:['foundation','inferno','iron-core'],note:'Deload. Lighter, sharper, recover strong.',load:'Drop a bell. Move beautifully. You earned this week.'}
+    ]
+  }];
+  function getProgState(){return load(PK,null);}
+  function setProgState(p){save(PK,p);}
+  function progDef(id){return PROGRAMS.find(p=>p.id===id);}
+  function activeProgram(){const s=getProgState();if(!s)return null;const def=progDef(s.id);return def?{state:s,def}:null;}
+  function programSessions(def){const out=[];def.arc.forEach(wk=>wk.sessions.forEach((wid,di)=>out.push({week:wk.wk,dayInWeek:di+1,workoutId:wid,note:wk.note,load:wk.load})));return out;}
+  function nextProgSession(){const a=activeProgram();if(!a)return null;return programSessions(a.def)[a.state.pos]||null;}
+  function startProgram(id){setProgState({id:id,startedAt:Date.now(),pos:0});}
+  function advanceProgram(){const s=getProgState();if(s){s.pos+=1;setProgState(s);}}
+  function restartProgram(){const s=getProgState();if(s){s.pos=0;s.startedAt=Date.now();setProgState(s);}}
+  function leaveProgram(){try{localStorage.removeItem(PK);}catch(e){}}
+  function shortName(id){const w=workoutById(id);return w?w.name:id;}
+
+  function startProgramSession(){
+    const s=nextProgSession();if(!s)return;
+    const w=workoutById(s.workoutId);if(!w)return;
+    startWorkout(w,{program:true,week:s.week,dayInWeek:s.dayInWeek,note:s.note,load:s.load});
+  }
+
+  /* home top card — program-aware */
+  function homeProgramSection(rec){
+    const a=activeProgram();
+    if(a){
+      const sess=programSessions(a.def),pos=a.state.pos,next=sess[pos];
+      if(next){const m=workoutById(next.workoutId);
+        return `<div class="section-h">Your program</div>
+        <div class="reco">
+          <div class="tag">${esc(a.def.name)} \xB7 Week ${next.week} \xB7 Day ${next.dayInWeek}</div>
+          <div class="nm">${esc(m?m.name:next.workoutId)}</div>
+          <div class="desc">${esc(next.note)}</div>
+          <button class="btn" id="homeProgGo">Start Day ${next.dayInWeek}</button>
+          <button class="btn ghost sm" id="homeProgView" style="margin-top:10px">View full program</button>
+        </div>`;
+      }
+      return `<div class="section-h">Your program</div>
+        <div class="reco"><div class="tag">${esc(a.def.name)}</div><div class="nm">Program complete ★</div>
+        <div class="desc">Eight weeks, done. Run it again heavier, or train freely.</div>
+        <button class="btn ghost sm" id="homeProgView">View program</button></div>`;
+    }
+    return `<div class="section-h">Recommended for you</div>
+      <div class="reco">
+        <div class="tag">${esc(rec.tag)} \xB7 ${esc(rec.duration)}</div>
+        <div class="nm">${esc(rec.name)}</div>
+        <div class="desc">${esc(rec.description)}</div>
+        <button class="btn" data-start="${rec.id}">Start workout</button>
+      </div>
+      <button class="wkt" id="homeProgStart" style="margin-top:12px;border-color:var(--sage);background:linear-gradient(160deg,rgba(107,128,104,0.14),var(--surface))">
+        <div class="nm">Ready to commit? →</div>
+        <div class="desc">Follow The Long Run — an 8-week plan that builds you up week by week.</div>
+      </button>`;
+  }
+  function bindHomeProgram(){
+    const g=$('#homeProgGo');if(g)g.onclick=()=>startProgramSession();
+    const v=$('#homeProgView');if(v)v.onclick=()=>go('program');
+    const s=$('#homeProgStart');if(s)s.onclick=()=>go('program');
+  }
+
+  function renderProgramOverview(){
+    const a=activeProgram();
+    if(!a){
+      const def=PROGRAMS[0];
+      let h=`<button class="pl-quit" data-back="home" style="margin-bottom:14px">← Home</button>
+        <div class="page-h">${esc(def.name)}</div><div class="page-sub">${esc(def.subtitle)}</div>
+        <div class="muted" style="font-size:14.5px;line-height:1.6;margin-bottom:6px">${esc(def.blurb)}</div>
+        <div class="section-h">The arc</div>`;
+      def.arc.forEach(wk=>{h+=`<div class="kv"><span class="k">Week ${wk.wk}</span><span>${wk.sessions.map(shortName).join(' \xB7 ')}</span></div>`;});
+      h+=`<div class="muted" style="font-size:13px;line-height:1.6;margin:14px 0 16px">${def.weeks} weeks \xB7 ${def.perWeek} days/week \xB7 ${def.weeks*def.perWeek} sessions. Pause or leave anytime — your logs are always saved.</div>
+        <button class="btn" id="progStart">Start Week 1</button>`;
+      return h;
+    }
+    const sess=programSessions(a.def),pos=a.state.pos,total=sess.length,next=sess[pos];
+    let h=`<button class="pl-quit" data-back="home" style="margin-bottom:14px">← Home</button>
+      <div class="page-h">${esc(a.def.name)}</div>
+      <div class="page-sub">${pos>=total?'Program complete':('Week '+next.week+' of '+a.def.weeks+' \xB7 '+pos+'/'+total+' sessions')}</div>
+      <div class="pl-bar" style="margin:0 0 16px"><i style="width:${Math.round(pos/total*100)}%"></i></div>`;
+    let curWk=null;
+    sess.forEach((s,ix)=>{
+      if(s.week!==curWk){curWk=s.week;
+        const isThisWeek=pos>=ix&&pos<ix+a.def.perWeek;
+        h+=`<div class="round-h" style="margin-top:16px">Week ${s.week}${isThisWeek?' <span>\xB7 this week</span>':''}</div>`;
+      }
+      const status=ix<pos?'done':(ix===pos?'now':'todo');
+      const m=workoutById(s.workoutId);
+      h+=`<div class="kv"${status==='now'?' style="border-bottom-color:var(--sage)"':''}>
+        <span class="k">Day ${s.dayInWeek} \xB7 ${esc(m?m.name:s.workoutId)}</span>
+        <span>${status==='done'?'✓':(status==='now'?'<span class="accent">Next</span>':'')}</span></div>`;
+    });
+    if(pos<total){
+      h+=`<div class="card" style="margin-top:18px"><div style="font-size:11px;font-weight:700;color:var(--sage);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">Week ${next.week} focus</div>
+        <div style="font-size:14px;line-height:1.55;margin-bottom:6px">${esc(next.note)}</div>
+        <div class="muted" style="font-size:13px;line-height:1.5">${esc(next.load)}</div></div>
+        <button class="btn" id="progGo" style="margin-top:14px">Start Day ${next.dayInWeek} \xB7 ${esc(shortName(next.workoutId))}</button>`;
+    } else {
+      h+=`<div class="card" style="margin-top:18px"><div style="font-size:15px;font-weight:800;color:var(--sage-bright)">★ Eight weeks done.</div><div class="muted" style="font-size:13.5px;margin-top:6px;line-height:1.6">You showed up and put in the work. Run it again heavier, or pick any workout freely.</div></div>
+        <button class="btn" id="progRestart" style="margin-top:14px">Run it again</button>`;
+    }
+    h+=`<button class="btn danger sm" id="progLeave" style="margin-top:12px">Leave program</button>`;
+    return h;
+  }
+  afterRender.program=()=>{
+    bindBack();
+    const st=$('#progStart');if(st)st.onclick=()=>{startProgram('longrun');render();};
+    const go_=$('#progGo');if(go_)go_.onclick=()=>startProgramSession();
+    const rs=$('#progRestart');if(rs)rs.onclick=()=>{restartProgram();render();toast('Program reset to Week 1');};
+    const lv=$('#progLeave');if(lv)lv.onclick=()=>{if(confirm('Leave the program? Your workout history stays saved; you can rejoin anytime.')){leaveProgram();go('home');}};
+  };
+  </script>
+  <script>
+  /* ============================================================
      WORKOUT PLAYER
      ============================================================ */
   let P=null; // player state
 
-  function startWorkout(workout){
+  function startWorkout(workout,opts){
     if(!workout)return;
     const steps=flatten(workout,S.settings.warmup);
-    P={workout,steps,i:0,phase:'work',timeLeft:0,running:false,startedAt:Date.now(),sets:[],lastBeep:null,timer:null};
+    P={workout,programCtx:(opts&&opts.program)?opts:null,steps,i:0,phase:'work',timeLeft:0,running:false,startedAt:Date.now(),sets:[],lastBeep:null,timer:null};
     document.body.style.overflow='hidden';
     renderPlayer();
     enterStep();
@@ -812,7 +931,7 @@
     const vol=sets.reduce((a,s)=>a+((s.weight||0)*(s.reps||0)),0);
     // PR check
     let prs=0;sets.forEach(s=>{const others=allSets().filter(x=>x.moveId===s.moveId&&x.when!==entry.completedAt);const max=others.reduce((a,x)=>Math.max(a,x.weight),0);if(s.weight>max&&s.weight>0)prs++;});
-    const w=P.workout;P=null;
+    const w=P.workout;const wasProgram=P.programCtx;P=null;if(wasProgram)advanceProgram();
     const host=$('#overlay');
     host.innerHTML=`<div class="player"><div class="pl-body">
       <div class="pl-round">Workout complete</div>
@@ -826,7 +945,7 @@
       </div>
       <div class="pl-ctrl"><button class="btn" id="finishDone">Done</button></div></div>`;
     document.body.style.overflow='';
-    $('#finishDone').onclick=()=>{$('#overlay').innerHTML='';go('progress');};
+    $('#finishDone').onclick=()=>{$('#overlay').innerHTML='';go(wasProgram?'program':'progress');};
   }
 
   /* ============================================================
