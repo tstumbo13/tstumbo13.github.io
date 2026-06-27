@@ -1158,7 +1158,8 @@
           <div class="nm">${esc(rec.name)}</div><div class="desc">${esc(rec.description)}</div></div>
         <p class="muted" style="font-size:13.5px">You can pick any of the six workouts any time, and build your own. Let's go.</p>
         <div class="spacer"></div>
-        <button class="btn" id="obFinish">Start training</button>`;
+        <button class="btn" id="obFinish">Start with ${esc(rec.name)}</button>
+        <button class="btn ghost" id="obBrowse" style="margin-top:10px">No thanks — show me all workouts</button>`;
     }
     host.innerHTML=`<div class="ob"><div class="ob-in">${inner}</div></div>`;
     bindOb();
@@ -1171,10 +1172,12 @@
     $$('[data-u]',s).forEach(b=>b.onclick=()=>{ob.unit=b.dataset.u;ob.bells=[];renderOb();});
     $$('[data-bell]',s).forEach(b=>b.onclick=()=>{const v=+b.dataset.bell;const i=ob.bells.indexOf(v);if(i>=0)ob.bells.splice(i,1);else ob.bells.push(v);renderOb();});
     const nx=$('#obNext',s);if(nx)nx.onclick=()=>{ob.step+=1;renderOb();};
-    const fin=$('#obFinish',s);if(fin)fin.onclick=()=>{
+    const finishOnboarding=(dest)=>{
       Object.assign(S.settings,{onboarded:true,goal:ob.goal,experience:ob.experience,unit:ob.unit,bells:ob.bells});
-      saveSettings();$('#overlay').innerHTML='';go('home');
+      saveSettings();$('#overlay').innerHTML='';go(dest);
     };
+    const fin=$('#obFinish',s);if(fin)fin.onclick=()=>finishOnboarding('home');
+    const br=$('#obBrowse',s);if(br)br.onclick=()=>finishOnboarding('workouts');
   }
 
   /* ============================================================
