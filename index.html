@@ -210,6 +210,7 @@
     .chip:hover{border-color:var(--sage)}
     .btn:hover{filter:brightness(1.08)}
   }
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--sage-bright);outline-offset:2px;border-radius:8px}
   @media (prefers-reduced-motion:reduce){*{transition-duration:.001ms !important;animation-duration:.001ms !important}}
   </style>
 </head>
@@ -306,6 +307,13 @@
   function trainedDays(){const set=new Set();(S.history||[]).forEach(h=>set.add(dayKey(h.completedAt)));return set;}
   function daysThisWeek(){const now=new Date();const start=new Date(now);start.setDate(now.getDate()-now.getDay());start.setHours(0,0,0,0);const set=new Set();(S.history||[]).forEach(h=>{const d=new Date(h.completedAt);if(d>=start)set.add(dayKey(d));});return set.size;}
   function currentStreak(){const days=Array.from(trainedDays());if(!days.length)return 0;const set=new Set(days);let streak=0;let d=new Date();for(let i=0;i<400;i++){if(set.has(dayKey(d))){streak++;}else if(i>0){break;}d.setDate(d.getDate()-1);}return streak;}
+  function weekStreak(){
+    const weeks=new Set();(S.history||[]).forEach(h=>{const t=new Date(h.completedAt);t.setDate(t.getDate()-t.getDay());t.setHours(0,0,0,0);weeks.add(t.getTime());});
+    if(!weeks.size)return 0;
+    const WK=7*24*3600*1000;let c=new Date();c.setDate(c.getDate()-c.getDay());c.setHours(0,0,0,0);let t=c.getTime();
+    if(!weeks.has(t))t-=WK; /* grace: current week not trained yet */
+    let s=0;while(weeks.has(t)){s++;t-=WK;}return s;
+  }
 
   function unit(){return S.settings.unit||'lb';}
   function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
@@ -370,7 +378,7 @@
   function renderHome(){
     const h=S.history||[];
     const rec=workoutById(recommendId())||PRESETS[0];
-    const dtw=daysThisWeek(),streak=currentStreak(),total=h.length;
+    const dtw=daysThisWeek(),streak=weekStreak(),total=h.length;
     const last=h[0];
     let html=`<div class="hero">
       <div class="hi">${greeting()}</div>
@@ -378,7 +386,7 @@
     </div>
     <div class="stat-row">
       <div class="stat"><div class="n">${dtw}</div><div class="l">Days this week</div></div>
-      <div class="stat"><div class="n">${streak}</div><div class="l">Day streak</div></div>
+      <div class="stat"><div class="n">${streak}</div><div class="l">Week streak</div></div>
       <div class="stat"><div class="n">${total}</div><div class="l">Sessions</div></div>
     </div>
     ${homeProgramSection(rec)}`;
@@ -537,7 +545,7 @@
     let html=`<div class="page-h">Progress</div><div class="page-sub">Proof you're getting stronger.</div>
     <div class="stat-row">
       <div class="stat"><div class="n">${trainedDays().size}</div><div class="l">Days trained</div></div>
-      <div class="stat"><div class="n">${currentStreak()}</div><div class="l">Day streak</div></div>
+      <div class="stat"><div class="n">${weekStreak()}</div><div class="l">Week streak</div></div>
       <div class="stat"><div class="n">${(totalVol/1000).toFixed(totalVol>=10000?0:1)}k</div><div class="l">${unit()} lifted</div></div>
     </div>`;
     if(!logged.length){
@@ -633,7 +641,7 @@
      ============================================================ */
   const PK='forge-program-v1';
   const PROGRAMS=[{
-    id:'longrun', name:'The Long Run', subtitle:'8-week strength + conditioning base', weeks:8, perWeek:3,
+    id:'longrun', name:'The Long Run', subtitle:'8-week strength + conditioning base', weeks:8, perWeek:3, goalFit:['general','strength','core'],
     blurb:'A progressive eight-week plan. Three days a week. Start light, build steadily, peak strong, then recover smart — the way real progress is actually built.',
     arc:[
       {wk:1,sessions:['foundation','inferno','iron-core'],note:'Greasing the groove. Move clean and find your weight.',load:'Pick a bell you fully control. Leave 2 reps in the tank on every set.'},
@@ -645,10 +653,35 @@
       {wk:7,sessions:['anvil','inferno','iron-core'],note:'Peak. Your strongest week.',load:'Push the top weight you can keep clean. This is the test.'},
       {wk:8,sessions:['foundation','inferno','iron-core'],note:'Deload. Lighter, sharper, recover strong.',load:'Drop a bell. Move beautifully. You earned this week.'}
     ]
+  },
+  {
+    id:'furnace', name:'The Furnace', subtitle:'6-week conditioning engine', weeks:6, perWeek:3, goalFit:['conditioning'],
+    blurb:'Six weeks to a bigger engine. Intervals, EMOMs, and burners — three days a week. Work capacity that actually lasts.',
+    arc:[
+      {wk:1,sessions:['emom-iron','inferno','iron-core'],note:'Set the pace. Move fast and clean.',load:'Go lighter than your strength weight — speed and form first.'},
+      {wk:2,sessions:['emom-iron','inferno','iron-core'],note:'Same engine, smoother. Hit every interval.',load:'Same bell. Beat the buzzer with reps to spare.'},
+      {wk:3,sessions:['inferno','emom-iron','foundation'],note:'Turn it up. More work, less rest.',load:'Hold your pace as the volume climbs.'},
+      {wk:4,sessions:['inferno','emom-iron','foundation'],note:'Push the burn. Stay in the work.',load:'Where you finished strong, add reps or a heavier bell.'},
+      {wk:5,sessions:['inferno','emom-iron','iron-core'],note:'Peak conditioning. Empty the tank.',load:'Bring everything to the intervals, then recover hard.'},
+      {wk:6,sessions:['foundation','inferno','iron-core'],note:'Deload. Move easy, breathe deep.',load:'Lighter and smooth. You built a real engine.'}
+    ]
+  },
+  {
+    id:'ironpath', name:'The Iron Path', subtitle:'6-week strength build', weeks:6, perWeek:3, goalFit:['strength'],
+    blurb:'Six weeks of heavy, deliberate strength. Compound lifts, longer rest, progressive load — genuinely stronger with one bell.',
+    arc:[
+      {wk:1,sessions:['foundation','anvil','iron-core'],note:'Build the base. Own every rep.',load:'Pick a weight you control for clean reps. Note it for next week.'},
+      {wk:2,sessions:['forge','anvil','iron-core'],note:'Add the Engine. More work, same loads.',load:'Match week 1 weights; add a rep where it felt strong.'},
+      {wk:3,sessions:['anvil','forge','iron-core'],note:'Get heavy. The Anvil leads.',load:'Go up a bell on a main lift if last week left reps in the tank.'},
+      {wk:4,sessions:['anvil','forge','iron-core'],note:'Push the lifts. Strength is the goal.',load:'Heavy and clean — 4 to 6 hard reps on the mains.'},
+      {wk:5,sessions:['anvil','anvil','iron-core'],note:'Peak strength. Two heavy days.',load:'Top weights you can keep honest. This is the test.'},
+      {wk:6,sessions:['foundation','forge','iron-core'],note:'Deload. Lighter, sharp, recover strong.',load:'Drop a bell, move well, let strength settle in.'}
+    ]
   }];
   function getProgState(){return load(PK,null);}
   function setProgState(p){save(PK,p);}
   function progDef(id){return PROGRAMS.find(p=>p.id===id);}
+  function recommendProgram(){const g=S.settings.goal;if(g==='conditioning')return 'furnace';if(g==='strength')return 'ironpath';return 'longrun';}
   function activeProgram(){const s=getProgState();if(!s)return null;const def=progDef(s.id);return def?{state:s,def}:null;}
   function programSessions(def){const out=[];def.arc.forEach(wk=>wk.sessions.forEach((wid,di)=>out.push({week:wk.wk,dayInWeek:di+1,workoutId:wid,note:wk.note,load:wk.load})));return out;}
   function nextProgSession(){const a=activeProgram();if(!a)return null;return programSessions(a.def)[a.state.pos]||null;}
@@ -693,7 +726,7 @@
       </div>
       <button class="wkt" id="homeProgStart" style="margin-top:12px;border-color:var(--sage);background:linear-gradient(160deg,rgba(107,128,104,0.14),var(--surface))">
         <div class="nm">Ready to commit? →</div>
-        <div class="desc">Follow The Long Run — an 8-week plan that builds you up week by week.</div>
+        <div class="desc">Browse the multi-week programs and let a plan build you up, week by week.</div>
       </button>`;
   }
   function bindHomeProgram(){
@@ -705,14 +738,26 @@
   function renderProgramOverview(){
     const a=activeProgram();
     if(!a){
-      const def=PROGRAMS[0];
-      let h=`<button class="pl-quit" data-back="home" style="margin-bottom:14px">← Home</button>
+      const pid=view.params.pid;
+      if(!pid){
+        const recId=recommendProgram();
+        const ordered=PROGRAMS.slice().sort((x,y)=>(x.id===recId?-1:(y.id===recId?1:0)));
+        let h=`<button class="pl-quit" data-back="home" style="margin-bottom:14px">← Home</button>
+          <div class="page-h">Programs</div><div class="page-sub">Commit to a plan and let it build you up, week by week.</div>`;
+        ordered.forEach(p=>{h+=`<button class="wkt" data-pid="${p.id}">
+          <div class="nm">${esc(p.name)}${p.id===recId?' <span class="pill sage" style="margin-left:6px">For your goal</span>':''}</div>
+          <div class="meta"><span class="pill">${p.weeks} weeks</span><span class="pill">${p.perWeek}\xD7 / week</span></div>
+          <div class="desc">${esc(p.subtitle)}</div></button>`;});
+        return h;
+      }
+      const def=progDef(pid)||PROGRAMS[0];
+      let h=`<button class="pl-quit" data-back="program" style="margin-bottom:14px">← Programs</button>
         <div class="page-h">${esc(def.name)}</div><div class="page-sub">${esc(def.subtitle)}</div>
         <div class="muted" style="font-size:14.5px;line-height:1.6;margin-bottom:6px">${esc(def.blurb)}</div>
         <div class="section-h">The arc</div>`;
       def.arc.forEach(wk=>{h+=`<div class="kv"><span class="k">Week ${wk.wk}</span><span>${wk.sessions.map(shortName).join(' \xB7 ')}</span></div>`;});
       h+=`<div class="muted" style="font-size:13px;line-height:1.6;margin:14px 0 16px">${def.weeks} weeks \xB7 ${def.perWeek} days/week \xB7 ${def.weeks*def.perWeek} sessions. Pause or leave anytime — your logs are always saved.</div>
-        <button class="btn" id="progStart">Start Week 1</button>`;
+        <button class="btn" id="progStart" data-pid="${pid}">Start Week 1</button>`;
       return h;
     }
     const sess=programSessions(a.def),pos=a.state.pos,total=sess.length,next=sess[pos];
@@ -746,7 +791,10 @@
   }
   afterRender.program=()=>{
     bindBack();
-    const st=$('#progStart');if(st)st.onclick=()=>{startProgram('longrun');render();};
+    $$('[data-pid]').forEach(b=>b.onclick=()=>{
+      if(b.id==='progStart'){startProgram(b.dataset.pid);render();toast('Program started — Week 1');}
+      else{go('program',{pid:b.dataset.pid});}
+    });
     const go_=$('#progGo');if(go_)go_.onclick=()=>startProgramSession();
     const rs=$('#progRestart');if(rs)rs.onclick=()=>{restartProgram();render();toast('Program reset to Week 1');};
     const lv=$('#progLeave');if(lv)lv.onclick=()=>{if(confirm('Leave the program? Your workout history stays saved; you can rejoin anytime.')){leaveProgram();go('home');}};
@@ -845,21 +893,21 @@
     let ctrl='';
     if(isRest){
       ctrl=`<div class="pl-foot">
-        <button class="icon-btn" id="plPrev">←</button>
+        <button class="icon-btn" id="plPrev" aria-label="Previous exercise">←</button>
         <button class="btn" id="plPause">${P.running?'Pause':'Resume'}</button>
-        <button class="icon-btn" id="plNext">→</button></div>`;
+        <button class="icon-btn" id="plNext" aria-label="Next exercise">→</button></div>`;
     } else if(s.mode==='time'){
       ctrl=`<div class="pl-foot">
-        <button class="icon-btn" id="plPrev">←</button>
+        <button class="icon-btn" id="plPrev" aria-label="Previous exercise">←</button>
         <button class="btn" id="plPause">${P.running?'Pause':'Resume'}</button>
-        <button class="icon-btn" id="plNext">→</button></div>`;
+        <button class="icon-btn" id="plNext" aria-label="Next exercise">→</button></div>`;
       if(isLoggable(s.moveId)&&!isWarm)ctrl=`<button class="btn ghost sm" id="plLog" style="margin-bottom:10px">Log weight + reps</button>`+ctrl;
     } else {
       ctrl=`${isLoggable(s.moveId)&&!isWarm?`<button class="btn ghost" id="plLog" style="margin-bottom:10px">Log weight + reps</button>`:''}
         <div class="pl-foot">
-        <button class="icon-btn" id="plPrev">←</button>
+        <button class="icon-btn" id="plPrev" aria-label="Previous exercise">←</button>
         <button class="btn" id="plDone">Done</button>
-        <button class="icon-btn" id="plNext">→</button></div>`;
+        <button class="icon-btn" id="plNext" aria-label="Next exercise">→</button></div>`;
     }
     host.innerHTML=`<div class="player">
       <div class="pl-top"><button class="pl-quit" id="plQuit">Quit</button>
@@ -900,9 +948,9 @@
       <div class="muted" style="font-size:13px;margin-bottom:18px">${esc(step.reps||(step.duration?step.duration+'s':''))}${prev!=null?` \xB7 last: ${prev} ${unit()}`:''}</div>
       <div class="log-grid">
         <div><label>Bell weight (${unit()})</label>
-          <div class="stepper"><button id="wDown">−</button><input id="wVal" type="number" inputmode="numeric" value="${w0}"><button id="wUp">+</button></div></div>
+          <div class="stepper"><button id="wDown" aria-label="Decrease weight">−</button><input id="wVal" aria-label="Bell weight" type="number" inputmode="numeric" value="${w0}"><button id="wUp" aria-label="Increase weight">+</button></div></div>
         <div><label>Reps done</label>
-          <div class="stepper"><button id="rDown">−</button><input id="rVal" type="number" inputmode="numeric" value="${r0}" placeholder="0"><button id="rUp">+</button></div></div>
+          <div class="stepper"><button id="rDown" aria-label="Decrease reps">−</button><input id="rVal" aria-label="Reps done" type="number" inputmode="numeric" value="${r0}" placeholder="0"><button id="rUp" aria-label="Increase reps">+</button></div></div>
       </div>
       <button class="btn" id="logSave">Save set</button>
       <button class="btn ghost sm" id="logCancel" style="margin-top:10px">Cancel</button>
@@ -1003,7 +1051,7 @@
     if(!draft)draft={name:'',items:[]};
     let html=`<button class="pl-quit" data-back="workouts" style="margin-bottom:14px">← Workouts</button>
     <div class="page-h">Build a workout</div><div class="page-sub">Pick movements, set reps or time, done.</div>
-    <input id="bName" placeholder="Workout name" value="${esc(draft.name)}" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--bone);font-size:16px;margin-bottom:16px">
+    <input id="bName" aria-label="Workout name" placeholder="Workout name" value="${esc(draft.name)}" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--bone);font-size:16px;margin-bottom:16px">
     <div class="section-h">Movements (${draft.items.length})</div>`;
     if(draft.items.length){html+=draft.items.map((it,ix)=>`<div class="kv"><span class="k">${esc(moveName(it.id))}</span><span>${it.mode==='time'?it.duration+'s':esc(it.reps)} <button data-rm="${ix}" style="color:var(--danger);margin-left:10px">✕</button></span></div>`).join('');}
     else{html+=`<div class="muted" style="font-size:13px;margin-bottom:8px">Add your first movement below.</div>`;}
