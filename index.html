@@ -53,6 +53,11 @@
       0%, 100% { opacity: 0.4; transform: scale(0.95); }
       50% { opacity: 1; transform: scale(1.05); }
     }
+    /* iOS standalone PWA: reserve the status-bar (clock/battery) area so the
+       header logo + name aren't tucked under it. The dark header background
+       still fills up behind the status bar for a clean full-screen look. */
+    .header { padding-top: calc(14px + env(safe-area-inset-top)) !important; }
+    .active-header { padding-top: calc(16px + env(safe-area-inset-top)) !important; }
   </style>
 </head>
 <body>
