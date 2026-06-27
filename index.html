@@ -264,6 +264,17 @@
 
   const PRESETS=[{id:"foundation",name:"The Foundation",tag:"Beginner",duration:"~18 min",bells:1,description:"Master the basics. Three rounds of the six fundamental movements. Light load. Perfect form.",blocks:[{id:"halo",mode:"reps",reps:"5 each way",rest:30},{type:"round",rounds:3,name:"Strength Circuit",restBetweenRounds:60,blocks:[{id:"goblet-squat",mode:"reps",reps:"10",rest:30},{id:"two-hand-swing",mode:"time",duration:25,rest:30},{id:"press",mode:"reps",reps:"5 each side",rest:30},{id:"row",mode:"reps",reps:"8 each side",rest:45}]},{id:"farmer-carry",mode:"time",duration:45,rest:0}]},{id:"forge",name:"The Engine",tag:"Intermediate",duration:"~25 min",bells:1,description:"Build the engine. Three rounds of clean, press, squat, and row. Power finisher.",blocks:[{id:"halo",mode:"reps",reps:"8 each way",rest:20},{id:"two-hand-swing",mode:"time",duration:40,rest:60},{type:"round",rounds:3,name:"Strength Circuit",restBetweenRounds:75,blocks:[{id:"clean",mode:"reps",reps:"6 each side",rest:30},{id:"press",mode:"reps",reps:"5 each side",rest:30},{id:"goblet-squat",mode:"reps",reps:"10",rest:30},{id:"row",mode:"reps",reps:"8 each side",rest:45}]},{id:"thruster",mode:"time",duration:30,rest:60},{id:"farmer-carry",mode:"time",duration:60,rest:0}]},{id:"anvil",name:"The Anvil",tag:"Advanced",duration:"~32 min",bells:1,description:"Heavy strength work. Five rounds of compound lifts, three rounds of power. Slow on the way down. Ballistic on the way up.",blocks:[{id:"turkish-getup",mode:"reps",reps:"2 each side",rest:75},{type:"round",rounds:5,name:"Heavy Block",restBetweenRounds:90,blocks:[{id:"deadlift",mode:"reps",reps:"5 (heavy)",rest:75},{id:"press",mode:"reps",reps:"4 each side (heavy)",rest:75},{id:"front-rack-squat",mode:"reps",reps:"6 (heavy)",rest:60}]},{type:"round",rounds:3,name:"Power Finisher",restBetweenRounds:60,blocks:[{id:"snatch",mode:"reps",reps:"5 each side",rest:30},{id:"windmill",mode:"reps",reps:"3 each side",rest:45}]},{id:"two-hand-swing",mode:"time",duration:60,rest:0}]},{id:"emom-iron",name:"EMOM Iron",tag:"Conditioning \xB7 Circuit",duration:"~14 min",bells:1,description:"Every minute on the minute. Four rounds of three movements. Beat the clock.",blocks:[{id:"halo",mode:"reps",reps:"5 each way",rest:30},{type:"round",rounds:4,name:"EMOM Circuit",blocks:[{id:"two-hand-swing",mode:"reps",reps:"15",rest:15},{id:"goblet-squat",mode:"reps",reps:"10",rest:15},{id:"push-press",mode:"reps",reps:"6 each side",rest:30}]},{id:"farmer-carry",mode:"time",duration:60,rest:0}]},{id:"inferno",name:"Inferno",tag:"Conditioning",duration:"~15 min",bells:1,description:"Forty seconds on, twenty off. Three rounds. Burn the lungs to ash.",blocks:[{type:"round",rounds:3,name:"Burn Circuit",restBetweenRounds:60,blocks:[{id:"two-hand-swing",mode:"time",duration:40,rest:20},{id:"goblet-squat",mode:"time",duration:40,rest:20},{id:"figure-eight",mode:"time",duration:40,rest:60}]},{id:"farmer-carry",mode:"time",duration:60,rest:0}]},{id:"iron-core",name:"Iron Core",tag:"Core Focus",duration:"~16 min",bells:1,description:"Bracing. Rotation. Anti-rotation. Three rounds of midline work, bookended by halos and carries.",blocks:[{id:"halo",mode:"reps",reps:"8 each way",rest:30},{id:"turkish-getup",mode:"reps",reps:"2 each side",rest:60},{type:"round",rounds:3,name:"Core Circuit",restBetweenRounds:60,blocks:[{id:"windmill",mode:"reps",reps:"3 each side",rest:30},{id:"russian-twist",mode:"time",duration:30,rest:30},{id:"figure-eight",mode:"time",duration:30,rest:30}]},{id:"farmer-carry",mode:"time",duration:60,rest:0}]}];
 
+  /* Vetted YouTube demo IDs per movement (verified embeddable via oembed, 2026-06-27) */
+  const VIDEOS={
+    "two-hand-swing":"z8ASOS5hQyc","single-arm-swing":"ejPpyLKZ1L4","clean":"MYpz7OykS7I","snatch":"AR6E01ABoHk",
+    "push-press":"CCqru4q9RK0","sumo-pull":"paH0vS_96pc","goblet-squat":"IkcOjDnHwyI","front-rack-squat":"OkJNQiPJjBk",
+    "press":"gjr-QAdsq4o","clean-and-press":"48qvCvJJr8Y","row":"8gg400ddt-g","renegade-row":"hzfgSIONtH4",
+    "deadlift":"l6gDwf3xC6s","single-leg-deadlift":"0P0t3h7Qbns","reverse-lunge":"gWN9epxFqX8","thruster":"wbtY1aenH6k",
+    "farmer-carry":"IH3Rt-DgYuw","suitcase-carry":"SXf6ePnQMJ8","turkish-getup":"crwMIeoBNiI","bottoms-up-press":"oODPDtNG3k4",
+    "overhead-carry":"j5ZoC9p6J-s","halo":"Sci3lijQBmk","windmill":"IZrX6EQWI_8","around-the-world":"N4mMVG8S5Kg",
+    "cossack-squat":"hDIiCBIM6tE","figure-eight":"mxDvhrMxuus","russian-twist":"PkGPokybYaU"
+  };
+
   const WARMUP={id:"__warmup",name:"Warm-Up",blocks:[
     {id:"halo",mode:"reps",reps:"5 each way",rest:10},
     {id:"around-the-world",mode:"reps",reps:"8 total",rest:10},
@@ -499,7 +510,7 @@
   function renderMoveDetail(){
     const id=view.params.id,m=MOVES[id];if(!m)return renderLibrary();
     const best=bestFor(id),sets=setsFor(id);
-    const vid=m.videoId;
+    const vid=VIDEOS[id]||m.videoId;
     let html=`<button class="pl-quit" data-back="library" style="margin-bottom:14px">← Library</button>
     <div class="page-h">${esc(m.name)}</div>
     <div class="meta" style="display:flex;gap:8px;margin:8px 0 6px"><span class="pill sage">${esc(m.category)}</span><span class="pill">${esc(m.difficulty)}</span></div>
